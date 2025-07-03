@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
         downloadBtn: document.getElementById('download-invoice'),
         resetBtn: document.getElementById('reset-form'),
         logoUpload: document.getElementById('logo-upload'),
+        showLogo: document.getElementById('show-logo'),
         fromAddress: document.getElementById('from-address'),
         toAddress: document.getElementById('to-address'),
         invoiceNumber: document.getElementById('invoice-number'),
@@ -16,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
         taxRate: document.getElementById('tax-rate'),
         notes: document.getElementById('notes'),
         signaturePadCanvas: document.getElementById('signature-pad'),
+        showSignature: document.getElementById('show-signature'),
         clearSignatureBtn: document.getElementById('clear-signature'),
     };
 
@@ -58,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
             signature: "Signature",
             clearSignature: "Clear Signature",
             livePreview: "Live Preview",
+            show: "Show",
             // Preview Pane
             invoice: "INVOICE",
             billedTo: "Billed To",
@@ -94,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
             signature: "Signature",
             clearSignature: "Effacer la signature",
             livePreview: "Aperçu en direct",
+            show: "Afficher",
             // Preview Pane
             invoice: "FACTURE",
             billedTo: "Facturé à",
@@ -167,6 +171,11 @@ document.addEventListener('DOMContentLoaded', () => {
         preview.invoiceDate.textContent = editor.invoiceDate.value;
         preview.dueDate.textContent = editor.dueDate.value;
         preview.notes.textContent = editor.notes.value;
+
+        // Toggle visibility based on checkboxes
+        preview.logo.style.display = editor.showLogo.checked ? 'block' : 'none';
+        preview.signature.parentElement.style.display = editor.showSignature.checked ? 'block' : 'none';
+
         updateItemsAndTotals();
         if (!signaturePad.isEmpty()) {
             preview.signature.src = signaturePad.toDataURL();
@@ -228,7 +237,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetForm = () => {
         if (confirm('Are you sure you want to reset everything?')) {
             document.querySelectorAll('input, textarea, select').forEach(el => {
-                if (el.id !== 'language-select') el.value = '';
+                if (el.type === 'checkbox') {
+                    el.checked = true;
+                } else if (el.id !== 'language-select') {
+                    el.value = '';
+                }
             });
             editor.itemsEditorList.innerHTML = '';
             editor.taxRate.value = '0';
@@ -258,7 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- HEADER ---
         // Logo
-        if (preview.logo.src && !preview.logo.src.includes('placeholder')) {
+        if (editor.showLogo.checked && preview.logo.src && !preview.logo.src.includes('placeholder')) {
             try {
                 doc.addImage(preview.logo, 'PNG', PADDING, PADDING, 40, 20);
             } catch (e) {
@@ -360,7 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Signature
-        if (!signaturePad.isEmpty()) {
+        if (editor.showSignature.checked && !signaturePad.isEmpty()) {
             const sigImgData = signaturePad.toDataURL('image/png');
             const sigCanvas = editor.signaturePadCanvas;
             const sigRatio = sigCanvas.width / sigCanvas.height;

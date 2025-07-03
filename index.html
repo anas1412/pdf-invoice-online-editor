@@ -44,7 +44,13 @@
 
                 <!-- Logo Upload -->
                 <div class="mb-6">
-                    <label class="block font-bold text-gray-600 mb-2" data-lang="companyLogo">Company Logo</label>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block font-bold text-gray-600" data-lang="companyLogo">Company Logo</label>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="show-logo" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" checked>
+                            <label for="show-logo" class="ml-2 text-sm font-medium text-gray-700" data-lang="show">Show</label>
+                        </div>
+                    </div>
                     <input type="file" id="logo-upload" class="hidden">
                     <button onclick="document.getElementById('logo-upload').click()" class="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 transition-colors" data-lang="chooseFile">Choose File</button>
                 </div>
@@ -111,7 +117,13 @@
 
                 <!-- Signature -->
                 <div class="mt-6">
-                    <label class="block font-bold text-gray-600 mb-2" data-lang="signature">Signature</label>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block font-bold text-gray-600" data-lang="signature">Signature</label>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="show-signature" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" checked>
+                            <label for="show-signature" class="ml-2 text-sm font-medium text-gray-700" data-lang="show">Show</label>
+                        </div>
+                    </div>
                     <div class="border rounded bg-gray-50">
                         <canvas id="signature-pad" class="w-full h-48"></canvas>
                     </div>
