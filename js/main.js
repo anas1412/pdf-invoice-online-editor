@@ -241,24 +241,143 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const downloadPDF = () => {
         const { jsPDF } = window.jspdf;
-        const invoice = document.getElementById('invoice-preview');
-        html2canvas(invoice, { scale: 3, useCORS: true }).then(canvas => {
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const canvasWidth = canvas.width;
-            const canvasHeight = canvas.height;
-            const ratio = canvasWidth / canvasHeight;
-            let imgWidth = pdfWidth;
-            let imgHeight = imgWidth / ratio;
-            if (imgHeight > pdfHeight) {
-                imgHeight = pdfHeight;
-                imgWidth = imgHeight * ratio;
+        const doc = new jsPDF();
+
+        // --- DOCUMENT STYLING AND METADATA ---
+        const PADDING = 15;
+        const PAGE_WIDTH = doc.internal.pageSize.getWidth();
+        const PAGE_HEIGHT = doc.internal.pageSize.getHeight();
+        const CONTENT_WIDTH = PAGE_WIDTH - PADDING * 2;
+
+        // --- HELPER FUNCTIONS ---
+        const addWrappedText = (text, x, y, options) => {
+            const lines = doc.splitTextToSize(text, options.maxWidth || CONTENT_WIDTH);
+            doc.text(lines, x, y);
+            return doc.getTextDimensions(lines).h;
+        };
+
+        // --- HEADER ---
+        // Logo
+        if (preview.logo.src && !preview.logo.src.includes('placeholder')) {
+            try {
+                doc.addImage(preview.logo, 'PNG', PADDING, PADDING, 40, 20);
+            } catch (e) {
+                console.error("Error adding logo image:", e);
             }
-            pdf.addImage(imgData, 'PNG', 5, 5, imgWidth - 10, imgHeight - 10);
-            pdf.save(`invoice-${editor.invoiceNumber.value || 'download'}.pdf`);
+        }
+        
+        // Invoice Title
+        doc.setFontSize(30).setFont(undefined, 'bold');
+        doc.text(translations[currentLang].invoice.toUpperCase(), PAGE_WIDTH - PADDING, PADDING + 15, { align: 'right' });
+        doc.setFontSize(12).setFont(undefined, 'normal');
+        doc.text(`${translations[currentLang].invoiceNumberLabel} ${editor.invoiceNumber.value}`, PAGE_WIDTH - PADDING, PADDING + 22, { align: 'right' });
+
+        // --- ADDRESSES ---
+        let yPos = PADDING + 40;
+        doc.setFontSize(10);
+        const fromText = editor.fromAddress.value;
+        const toText = editor.toAddress.value;
+        addWrappedText(fromText, PADDING, yPos, { maxWidth: 80 });
+        
+        doc.setFont(undefined, 'bold');
+        doc.text(translations[currentLang].billedTo.toUpperCase(), PAGE_WIDTH / 2, yPos);
+        doc.setFont(undefined, 'normal');
+        addWrappedText(toText, PAGE_WIDTH / 2, yPos + 5, { maxWidth: 80 });
+
+        // --- DATES ---
+        yPos += 30;
+        doc.text(`${translations[currentLang].invoiceDate} ${formatDisplayDate(editor.invoiceDate.value)}`, PAGE_WIDTH - PADDING, yPos, { align: 'right' });
+        doc.text(`${translations[currentLang].previewDueDate} ${formatDisplayDate(editor.dueDate.value)}`, PAGE_WIDTH - PADDING, yPos + 7, { align: 'right' });
+        
+        yPos += 20;
+
+        // --- ITEMS TABLE ---
+        const tableHead = [[
+            translations[currentLang].description,
+            translations[currentLang].qty,
+            translations[currentLang].unitPrice,
+            translations[currentLang].total
+        ]];
+
+        const tableBody = [];
+        let subtotal = 0;
+        editor.itemsEditorList.querySelectorAll('.item-editor').forEach(itemRow => {
+            const description = itemRow.querySelector('.item-description').value || '...';
+            const quantity = parseFloat(itemRow.querySelector('.item-quantity').value) || 0;
+            const rate = parseFloat(itemRow.querySelector('.item-rate').value) || 0;
+            const total = quantity * rate;
+            subtotal += total;
+            tableBody.push([
+                description,
+                quantity,
+                formatCurrency(rate),
+                formatCurrency(total)
+            ]);
         });
+
+        doc.autoTable({
+            startY: yPos,
+            head: tableHead,
+            body: tableBody,
+            theme: 'striped',
+            headStyles: { fillColor: [34, 34, 34] },
+            styles: { fontSize: 10 },
+            columnStyles: {
+                1: { halign: 'center' },
+                2: { halign: 'right' },
+                3: { halign: 'right' }
+            }
+        });
+
+        // --- TOTALS ---
+        yPos = doc.autoTable.previous.finalY + 10;
+        const taxRate = parseFloat(editor.taxRate.value) || 0;
+        const taxAmount = subtotal * (taxRate / 100);
+        const totalAmount = subtotal + taxAmount;
+
+        doc.setFontSize(12);
+        const totalsX = PAGE_WIDTH - PADDING - 50;
+        doc.text(`${translations[currentLang].subtotal}:`, totalsX, yPos, { align: 'left' });
+        doc.text(formatCurrency(subtotal), PAGE_WIDTH - PADDING, yPos, { align: 'right' });
+        
+        doc.text(`${translations[currentLang].tax} (${taxRate}%):`, totalsX, yPos + 7, { align: 'left' });
+        doc.text(formatCurrency(taxAmount), PAGE_WIDTH - PADDING, yPos + 7, { align: 'right' });
+        
+        doc.setFont(undefined, 'bold');
+        doc.text(`${translations[currentLang].total}:`, totalsX, yPos + 14, { align: 'left' });
+        doc.text(formatCurrency(totalAmount), PAGE_WIDTH - PADDING, yPos + 14, { align: 'right' });
+        doc.setFont(undefined, 'normal');
+
+        // --- FOOTER (NOTES & SIGNATURE) ---
+        yPos = Math.max(yPos + 30, PAGE_HEIGHT - 50); // Ensure footer is near the bottom
+        
+        // Notes
+        if (editor.notes.value) {
+            doc.setFontSize(10).setFont(undefined, 'bold');
+            doc.text(translations[currentLang].previewNotes.toUpperCase(), PADDING, yPos);
+            doc.setFont(undefined, 'normal');
+            addWrappedText(editor.notes.value, PADDING, yPos + 5, { maxWidth: 120 });
+        }
+
+        // Signature
+        if (!signaturePad.isEmpty()) {
+            const sigImgData = signaturePad.toDataURL('image/png');
+            const sigCanvas = editor.signaturePadCanvas;
+            const sigRatio = sigCanvas.width / sigCanvas.height;
+
+            const sigMaxWidth = 60; // mm
+            const sigHeight = sigMaxWidth / sigRatio;
+            const sigX = PAGE_WIDTH - PADDING - sigMaxWidth;
+            
+            doc.addImage(sigImgData, 'PNG', sigX, yPos, sigMaxWidth, sigHeight);
+            
+            const lineY = yPos + sigHeight + 2;
+            doc.line(sigX, lineY, sigX + sigMaxWidth, lineY);
+            doc.text(translations[currentLang].previewSignature, sigX, lineY + 5);
+        }
+
+        // --- SAVE DOCUMENT ---
+        doc.save(`invoice-${editor.invoiceNumber.value || 'download'}.pdf`);
     };
 
     const formatCurrency = (amount) => `${currencySymbol}${amount.toFixed(2)}`;
