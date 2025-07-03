@@ -1,4 +1,4 @@
-This project is a replica of the PDF Invoice Ultimate Editor from freemediatools.com, built using HTML, Tailwind CSS, and JavaScript.
+This project is built using HTML, Tailwind CSS, and JavaScript.
 
 **Tech Stack:**
 - **HTML:** For the core structure of the invoice editor.

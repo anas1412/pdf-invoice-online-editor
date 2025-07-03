@@ -1,4 +1,4 @@
-# PDF Invoice Ultimate Editor
+# PDF Invoice Online Editor
 
 A powerful, client-side PDF invoice generator built with HTML, Tailwind CSS, and vanilla JavaScript. This tool provides a seamless two-pane interface for editing invoice details on the left and viewing a real-time, professional preview on the right.
 
