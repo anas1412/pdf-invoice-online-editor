@@ -2,7 +2,7 @@
 
 A powerful, client-side PDF invoice generator built with HTML, Tailwind CSS, and vanilla JavaScript. This tool provides a seamless two-pane interface for editing invoice details on the left and viewing a real-time, professional preview on the right.
 
-**[➡️ Live Demo (Coming Soon!)](https://anas1412.github.io/pdf-invoice-online-editor/)**
+**[➡️ Live Demo](https://anas1412.github.io/pdf-invoice-online-editor/)**
 
 ![Screenshot of the PDF Invoice Editor](./SCREENSHOT.png)
 
