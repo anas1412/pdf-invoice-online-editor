@@ -155,8 +155,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const formatDisplayDate = (dateString) => {
         if (!dateString) return '';
-        const [year, month, day] = dateString.split('-');
-        return `${day}/${month}/${year}`;
+        // Flatpickr gives us the correct format, so we just return it
+        return dateString;
     };
 
     // --- CORE LOGIC ---
@@ -164,8 +164,8 @@ document.addEventListener('DOMContentLoaded', () => {
         preview.fromAddress.textContent = editor.fromAddress.value;
         preview.toAddress.textContent = editor.toAddress.value;
         preview.invoiceNumber.textContent = `${translations[currentLang].invoiceNumberLabel} ${editor.invoiceNumber.value}`;
-        preview.invoiceDate.textContent = formatDisplayDate(editor.invoiceDate.value);
-        preview.dueDate.textContent = formatDisplayDate(editor.dueDate.value);
+        preview.invoiceDate.textContent = editor.invoiceDate.value;
+        preview.dueDate.textContent = editor.dueDate.value;
         preview.notes.textContent = editor.notes.value;
         updateItemsAndTotals();
         if (!signaturePad.isEmpty()) {
@@ -286,8 +286,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- DATES ---
         yPos += 30;
-        doc.text(`${translations[currentLang].invoiceDate} ${formatDisplayDate(editor.invoiceDate.value)}`, PAGE_WIDTH - PADDING, yPos, { align: 'right' });
-        doc.text(`${translations[currentLang].previewDueDate} ${formatDisplayDate(editor.dueDate.value)}`, PAGE_WIDTH - PADDING, yPos + 7, { align: 'right' });
+        doc.text(`${translations[currentLang].invoiceDate} ${editor.invoiceDate.value}`, PAGE_WIDTH - PADDING, yPos, { align: 'right' });
+        doc.text(`${translations[currentLang].previewDueDate} ${editor.dueDate.value}`, PAGE_WIDTH - PADDING, yPos + 7, { align: 'right' });
         
         yPos += 20;
 
@@ -426,8 +426,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- INITIALIZATION ---
     const initialize = () => {
+        // Init Flatpickr
+        const fpConfig = {
+            dateFormat: "d/m/Y",
+        };
+        flatpickr(editor.invoiceDate, { ...fpConfig, defaultDate: "today" });
+        flatpickr(editor.dueDate, fpConfig);
+
         resizeCanvas();
-        setDate(editor.invoiceDate);
         editor.invoiceNumber.value = 'INV-001';
         addItemEditorRow();
         setLanguage(currentLang); // This will also call updatePreview

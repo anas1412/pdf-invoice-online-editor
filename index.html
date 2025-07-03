@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PDF Invoice Editor - Two-Pane Layout</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -68,11 +69,11 @@
                     </div>
                     <div>
                         <label for="invoice-date" class="block font-bold text-gray-600 mb-2" data-lang="date">Date</label>
-                        <input type="date" id="invoice-date" class="w-full p-2 border rounded">
+                        <input type="text" id="invoice-date" class="w-full p-2 border rounded">
                     </div>
                     <div>
                         <label for="due-date" class="block font-bold text-gray-600 mb-2" data-lang="dueDate">Due Date</label>
-                        <input type="date" id="due-date" class="w-full p-2 border rounded">
+                        <input type="text" id="due-date" class="w-full p-2 border rounded">
                     </div>
                 </div>
 
@@ -200,10 +201,10 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>
