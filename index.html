@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Invoice Editor - Two-Pane Layout</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Ensure the preview pane has a fixed aspect ratio for A4 paper */
+        #invoice-preview-container {
+            width: 100%;
+            max-width: 800px; /* Adjust as needed */
+            aspect-ratio: 210 / 297; /* A4 aspect ratio */
+            margin: auto;
+        }
+        #invoice-preview {
+            transform-origin: top left;
+        }
+    </style>
+</head>
+<body class="bg-gray-200 font-sans">
+    <div class="flex h-screen">
+        <!-- Left Pane: Editor -->
+        <div class="w-1/2 h-full overflow-y-auto bg-white p-8 shadow-lg">
+            <div class="editor-controls">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800" data-lang="invoiceEditor">Invoice Editor</h2>
+                
+                <!-- Language Selector -->
+                <div class="mb-6">
+                    <label for="language-select" class="block font-bold text-gray-600 mb-2" data-lang="language">Language</label>
+                    <select id="language-select" class="w-full p-2 border rounded bg-white">
+                        <option value="en">English</option>
+                        <option value="fr">Français</option>
+                    </select>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex space-x-4 mb-6">
+                    <button id="download-invoice" class="flex-1 bg-green-500 text-white px-4 py-3 rounded hover:bg-green-600 transition-colors font-bold" data-lang="downloadPDF"><i class="fas fa-download mr-2"></i> Download PDF</button>
+                    <button id="reset-form" class="flex-1 bg-red-500 text-white px-4 py-3 rounded hover:bg-red-600 transition-colors font-bold" data-lang="resetForm"><i class="fas fa-undo mr-2"></i> Reset Form</button>
+                </div>
+
+                <!-- Logo Upload -->
+                <div class="mb-6">
+                    <label class="block font-bold text-gray-600 mb-2" data-lang="companyLogo">Company Logo</label>
+                    <input type="file" id="logo-upload" class="hidden">
+                    <button onclick="document.getElementById('logo-upload').click()" class="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 transition-colors" data-lang="chooseFile">Choose File</button>
+                </div>
+
+                <!-- From/To Addresses -->
+                <div class="grid grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label class="block font-bold text-gray-600 mb-2" data-lang="fromYourDetails">From (Your Details)</label>
+                        <textarea id="from-address" class="w-full h-32 p-2 border rounded" placeholder="Your Company Name&#10;123 Street, City&#10;Country"></textarea>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-gray-600 mb-2" data-lang="toClientDetails">To (Client Details)</label>
+                        <textarea id="to-address" class="w-full h-32 p-2 border rounded" placeholder="Client Company Name&#10;456 Avenue, City&#10;Country"></textarea>
+                    </div>
+                </div>
+
+                <!-- Invoice Meta -->
+                <div class="grid grid-cols-3 gap-6 mb-6">
+                    <div>
+                        <label for="invoice-number" class="block font-bold text-gray-600 mb-2" data-lang="invoiceNumberLabel">Invoice #</label>
+                        <input type="text" id="invoice-number" class="w-full p-2 border rounded" value="INV-001">
+                    </div>
+                    <div>
+                        <label for="invoice-date" class="block font-bold text-gray-600 mb-2" data-lang="date">Date</label>
+                        <input type="date" id="invoice-date" class="w-full p-2 border rounded">
+                    </div>
+                    <div>
+                        <label for="due-date" class="block font-bold text-gray-600 mb-2" data-lang="dueDate">Due Date</label>
+                        <input type="date" id="due-date" class="w-full p-2 border rounded">
+                    </div>
+                </div>
+
+                <!-- Items Table Editor -->
+                <div id="items-editor">
+                    <h3 class="text-xl font-bold mb-4 text-gray-700" data-lang="invoiceItems">Invoice Items</h3>
+                    <div id="invoice-items-editor-list" class="space-y-4">
+                        <!-- JS will populate this -->
+                    </div>
+                    <button id="add-item" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors" data-lang="addItem"><i class="fas fa-plus mr-2"></i>Add Item</button>
+                </div>
+
+                <!-- Currency and Tax -->
+                <div class="grid grid-cols-2 gap-6 mt-6">
+                    <div>
+                        <label for="currency" class="block font-bold text-gray-600 mb-2" data-lang="currency">Currency</label>
+                        <select id="currency" class="w-full p-2 border rounded bg-white">
+                            <option data-symbol="$" value="USD">USD ($)</option>
+                            <option data-symbol="€" value="EUR">EUR (€)</option>
+                            <option data-symbol="£" value="GBP">GBP (£)</option>
+                            <option data-symbol="TND" value="TND">TND (TND)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="tax-rate" class="block font-bold text-gray-600 mb-2" data-lang="taxRate">Tax Rate (%)</label>
+                        <input type="number" id="tax-rate" class="w-full p-2 border rounded" value="0" min="0">
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="mt-6">
+                    <label for="notes" class="block font-bold text-gray-600 mb-2" data-lang="notes">Notes</label>
+                    <textarea id="notes" class="w-full h-24 p-2 border rounded" data-lang-placeholder="notesPlaceholder" placeholder="Any additional information..."></textarea>
+                </div>
+
+                <!-- Signature -->
+                <div class="mt-6">
+                    <label class="block font-bold text-gray-600 mb-2" data-lang="signature">Signature</label>
+                    <div class="border rounded bg-gray-50">
+                        <canvas id="signature-pad" class="w-full h-48"></canvas>
+                    </div>
+                    <button id="clear-signature" class="w-full text-sm text-gray-600 py-2 hover:text-red-500 transition-colors" data-lang="clearSignature">Clear Signature</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Pane: Live Preview -->
+        <div class="w-1/2 h-full overflow-y-auto bg-gray-200 p-8">
+            <h2 class="text-2xl font-bold mb-6 text-center text-gray-800" data-lang="livePreview">Live Preview</h2>
+            <div id="invoice-preview-container" class="bg-white p-12 shadow-2xl">
+                <div id="invoice-preview">
+                    <!-- Preview Header -->
+                    <header class="flex justify-between items-start pb-8 border-b-2 border-gray-200">
+                        <div class="w-3/5">
+                            <img id="logo-preview" src="https://freemediatools.com/assets/images/pdf-invoice-editor-ultimate/logo.png" alt="Company Logo" class="w-48 mb-4">
+                            <pre id="from-address-preview" class="whitespace-pre-wrap text-gray-600"></pre>
+                        </div>
+                        <div class="w-2/5 text-right">
+                            <h1 class="text-5xl font-bold text-gray-800" data-lang-preview="invoice">INVOICE</h1>
+                            <p id="invoice-number-preview" class="text-gray-500 mt-2"></p>
+                        </div>
+                    </header>
+
+                    <!-- Billing and Dates -->
+                    <section class="flex justify-between mt-8">
+                        <div class="w-1/2">
+                            <h3 class="text-sm font-bold text-gray-500 uppercase mb-2" data-lang-preview="billedTo">Billed To</h3>
+                            <pre id="to-address-preview" class="whitespace-pre-wrap text-gray-700"></pre>
+                        </div>
+                        <div class="w-1/2 text-right">
+                            <p class="mb-1"><strong class="text-gray-600" data-lang-preview="invoiceDate">Invoice Date:</strong> <span id="invoice-date-preview"></span></p>
+                            <p><strong class="text-gray-600" data-lang-preview="dueDate">Due Date:</strong> <span id="due-date-preview"></span></p>
+                        </div>
+                    </section>
+
+                    <!-- Items Table -->
+                    <section class="mt-8">
+                        <table class="w-full">
+                            <thead class="bg-gray-800 text-white">
+                                <tr>
+                                    <th class="p-3 text-left" data-lang-preview="description">Description</th>
+                                    <th class="p-3 text-center" data-lang-preview="qty">Qty</th>
+                                    <th class="p-3 text-right" data-lang-preview="unitPrice">Unit Price</th>
+                                    <th class="p-3 text-right" data-lang-preview="total">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invoice-items-preview">
+                                <!-- Preview items will be injected here -->
+                            </tbody>
+                        </table>
+                    </section>
+
+                    <!-- Totals -->
+                    <section class="flex justify-end mt-6">
+                        <div class="w-2/5">
+                            <div class="flex justify-between py-2 border-b">
+                                <span class="font-semibold text-gray-600" data-lang-preview="subtotal">Subtotal</span>
+                                <span id="subtotal-preview" class="text-gray-800">$0.00</span>
+                            </div>
+                            <div class="flex justify-between py-2 border-b">
+                                <span class="font-semibold text-gray-600" data-lang-preview="tax">Tax</span>
+                                <span id="tax-preview" class="text-gray-800">$0.00</span>
+                            </div>
+                            <div class="flex justify-between py-2 bg-gray-100 rounded-b-lg px-2">
+                                <span class="font-bold text-gray-800" data-lang-preview="total">Total</span>
+                                <span id="total-preview" class="font-bold text-gray-800">$0.00</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Footer -->
+                    <footer class="mt-12">
+                        <div class="mb-6">
+                            <h4 class="text-sm font-bold text-gray-500 uppercase mb-2" data-lang-preview="notes">Notes</h4>
+                            <p id="notes-preview" class="text-gray-600 text-sm"></p>
+                        </div>
+                        <div class="text-right">
+                            <h4 class="text-sm font-bold text-gray-500 uppercase mb-2" data-lang-preview="signature">Signature</h4>
+                            <img id="signature-preview" src="" alt="Signature" class="h-24 ml-auto">
+                            <div class="border-t-2 border-gray-300 mt-2 w-48 ml-auto"></div>
+                        </div>
+                    </footer>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
