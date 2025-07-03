@@ -11,6 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
         invoiceNumber: document.getElementById('invoice-number'),
         invoiceDate: document.getElementById('invoice-date'),
         dueDate: document.getElementById('due-date'),
+        showPaymentTerms: document.getElementById('show-payment-terms'),
+        paymentTerms: document.getElementById('payment-terms'),
         itemsEditorList: document.getElementById('invoice-items-editor-list'),
         addItemBtn: document.getElementById('add-item'),
         currencySelect: document.getElementById('currency'),
@@ -29,6 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
         invoiceNumber: document.getElementById('invoice-number-preview'),
         invoiceDate: document.getElementById('invoice-date-preview'),
         dueDate: document.getElementById('due-date-preview'),
+        paymentTermsContainer: document.getElementById('payment-terms-preview-container'),
+        paymentTerms: document.getElementById('payment-terms-preview'),
         itemsTable: document.getElementById('invoice-items-preview'),
         subtotal: document.getElementById('subtotal-preview'),
         tax: document.getElementById('tax-preview'),
@@ -51,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
             invoiceNumberLabel: "Invoice #",
             date: "Date",
             dueDate: "Due Date",
+            paymentTerms: "Payment Terms",
             invoiceItems: "Invoice Items",
             addItem: "Add Item",
             currency: "Currency",
@@ -66,6 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
             billedTo: "Billed To",
             invoiceDate: "Invoice Date:",
             previewDueDate: "Due Date:",
+            previewPaymentTerms: "Payment Terms:",
             description: "Description",
             qty: "Qty",
             unitPrice: "Unit Price",
@@ -88,6 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
             invoiceNumberLabel: "Facture n°",
             date: "Date",
             dueDate: "Date d'échéance",
+            paymentTerms: "Conditions de paiement",
             invoiceItems: "Articles de la facture",
             addItem: "Ajouter un article",
             currency: "Devise",
@@ -103,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
             billedTo: "Facturé à",
             invoiceDate: "Date de la facture:",
             previewDueDate: "Date d'échéance:",
+            previewPaymentTerms: "Conditions de paiement:",
             description: "Description",
             qty: "Qté",
             unitPrice: "Prix Unitaire",
@@ -171,10 +179,12 @@ document.addEventListener('DOMContentLoaded', () => {
         preview.invoiceDate.textContent = editor.invoiceDate.value;
         preview.dueDate.textContent = editor.dueDate.value;
         preview.notes.textContent = editor.notes.value;
+        preview.paymentTerms.textContent = editor.paymentTerms.value;
 
         // Toggle visibility based on checkboxes
         preview.logo.style.display = editor.showLogo.checked ? 'block' : 'none';
         preview.signature.parentElement.style.display = editor.showSignature.checked ? 'block' : 'none';
+        preview.paymentTermsContainer.style.display = editor.showPaymentTerms.checked ? 'block' : 'none';
 
         updateItemsAndTotals();
         if (!signaturePad.isEmpty()) {
@@ -297,10 +307,14 @@ document.addEventListener('DOMContentLoaded', () => {
         doc.setFont(undefined, 'normal');
         addWrappedText(toText, PAGE_WIDTH / 2, yPos + 5, { maxWidth: 80 });
 
-        // --- DATES ---
+        // --- DATES & PAYMENT TERMS ---
         yPos += 30;
-        doc.text(`${translations[currentLang].invoiceDate} ${editor.invoiceDate.value}`, PAGE_WIDTH - PADDING, yPos, { align: 'right' });
-        doc.text(`${translations[currentLang].previewDueDate} ${editor.dueDate.value}`, PAGE_WIDTH - PADDING, yPos + 7, { align: 'right' });
+        let dateX = PAGE_WIDTH - PADDING;
+        doc.text(`${translations[currentLang].invoiceDate} ${editor.invoiceDate.value}`, dateX, yPos, { align: 'right' });
+        doc.text(`${translations[currentLang].previewDueDate} ${editor.dueDate.value}`, dateX, yPos + 7, { align: 'right' });
+        if (editor.showPaymentTerms.checked && editor.paymentTerms.value) {
+            doc.text(`${translations[currentLang].previewPaymentTerms} ${editor.paymentTerms.value}`, dateX, yPos + 14, { align: 'right' });
+        }
         
         yPos += 20;
 
@@ -447,6 +461,7 @@ document.addEventListener('DOMContentLoaded', () => {
         flatpickr(editor.dueDate, fpConfig);
 
         resizeCanvas();
+        editor.paymentTerms.value = "Net 30";
         editor.invoiceNumber.value = 'INV-001';
         addItemEditorRow();
         setLanguage(currentLang); // This will also call updatePreview

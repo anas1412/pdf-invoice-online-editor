@@ -83,6 +83,18 @@
                     </div>
                 </div>
 
+                <!-- Payment Terms -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block font-bold text-gray-600" data-lang="paymentTerms">Payment Terms</label>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="show-payment-terms" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" checked>
+                            <label for="show-payment-terms" class="ml-2 text-sm font-medium text-gray-700" data-lang="show">Show</label>
+                        </div>
+                    </div>
+                    <input type="text" id="payment-terms" class="w-full p-2 border rounded">
+                </div>
+
                 <!-- Items Table Editor -->
                 <div id="items-editor">
                     <h3 class="text-xl font-bold mb-4 text-gray-700" data-lang="invoiceItems">Invoice Items</h3>
@@ -167,7 +179,8 @@
                         </div>
                         <div class="w-1/2 text-right">
                             <p class="mb-1"><strong class="text-gray-600" data-lang-preview="invoiceDate">Invoice Date:</strong> <span id="invoice-date-preview"></span></p>
-                            <p><strong class="text-gray-600" data-lang-preview="dueDate">Due Date:</strong> <span id="due-date-preview"></span></p>
+                            <p class="mb-1"><strong class="text-gray-600" data-lang-preview="dueDate">Due Date:</strong> <span id="due-date-preview"></span></p>
+                            <p id="payment-terms-preview-container"><strong class="text-gray-600" data-lang-preview="paymentTerms">Payment Terms:</strong> <span id="payment-terms-preview"></span></p>
                         </div>
                     </section>
 
