@@ -25,7 +25,10 @@
         <!-- Left Pane: Editor -->
         <div class="w-1/2 h-full overflow-y-auto bg-white p-8 shadow-lg">
             <div class="editor-controls">
-                <h2 class="text-2xl font-bold mb-6 text-gray-800" data-lang="invoiceEditor">Invoice Editor</h2>
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800" data-lang="invoiceEditor">Invoice Editor</h2>
+                    <span id="save-status" class="text-sm text-green-600 font-semibold opacity-0 transition-opacity duration-500">✓ Saved!</span>
+                </div>
                 
                 <!-- Language Selector -->
                 <div class="mb-6">

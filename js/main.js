@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DOM ELEMENT SELECTORS ---
     const editor = {
         languageSelect: document.getElementById('language-select'),
+        saveStatus: document.getElementById('save-status'),
         downloadBtn: document.getElementById('download-invoice'),
         resetBtn: document.getElementById('reset-form'),
         logoUpload: document.getElementById('logo-upload'),
@@ -66,12 +67,11 @@ document.addEventListener('DOMContentLoaded', () => {
             clearSignature: "Clear Signature",
             livePreview: "Live Preview",
             show: "Show",
-            // Preview Pane
+            previewPaymentTerms: "Payment Terms:",
             invoice: "INVOICE",
             billedTo: "Billed To",
             invoiceDate: "Invoice Date:",
             previewDueDate: "Due Date:",
-            previewPaymentTerms: "Payment Terms:",
             description: "Description",
             qty: "Qty",
             unitPrice: "Unit Price",
@@ -105,12 +105,11 @@ document.addEventListener('DOMContentLoaded', () => {
             clearSignature: "Effacer la signature",
             livePreview: "Aperçu en direct",
             show: "Afficher",
-            // Preview Pane
+            previewPaymentTerms: "Conditions de paiement:",
             invoice: "FACTURE",
             billedTo: "Facturé à",
             invoiceDate: "Date de la facture:",
             previewDueDate: "Date d'échéance:",
-            previewPaymentTerms: "Conditions de paiement:",
             description: "Description",
             qty: "Qté",
             unitPrice: "Prix Unitaire",
@@ -127,33 +126,105 @@ document.addEventListener('DOMContentLoaded', () => {
     let currencySymbol = '$';
     let currentLang = 'en';
     const signaturePad = new SignaturePad(editor.signaturePadCanvas);
+    let saveTimeout;
+
+    // --- LOCAL STORAGE & STATE ---
+    const showSaveStatus = () => {
+        clearTimeout(saveTimeout);
+        editor.saveStatus.style.opacity = '1';
+        saveTimeout = setTimeout(() => {
+            editor.saveStatus.style.opacity = '0';
+        }, 1500);
+    };
+
+    const saveState = () => {
+        const items = [];
+        editor.itemsEditorList.querySelectorAll('.item-editor').forEach(itemRow => {
+            items.push({
+                description: itemRow.querySelector('.item-description').value,
+                quantity: itemRow.querySelector('.item-quantity').value,
+                rate: itemRow.querySelector('.item-rate').value,
+            });
+        });
+
+        const state = {
+            fromAddress: editor.fromAddress.value,
+            toAddress: editor.toAddress.value,
+            invoiceNumber: editor.invoiceNumber.value,
+            invoiceDate: editor.invoiceDate.value,
+            dueDate: editor.dueDate.value,
+            paymentTerms: editor.paymentTerms.value,
+            notes: editor.notes.value,
+            taxRate: editor.taxRate.value,
+            currency: editor.currencySelect.value,
+            lang: editor.languageSelect.value,
+            items: items,
+            signature: signaturePad.toDataURL(),
+            showLogo: editor.showLogo.checked,
+            showSignature: editor.showSignature.checked,
+            showPaymentTerms: editor.showPaymentTerms.checked,
+            logo: preview.logo.src.includes('data:image') ? preview.logo.src : null,
+        };
+
+        localStorage.setItem('invoiceState', JSON.stringify(state));
+        showSaveStatus();
+    };
+
+    const loadState = () => {
+        const state = JSON.parse(localStorage.getItem('invoiceState'));
+        if (!state) return false;
+
+        editor.fromAddress.value = state.fromAddress || '';
+        editor.toAddress.value = state.toAddress || '';
+        editor.invoiceNumber.value = state.invoiceNumber || 'INV-001';
+        editor.invoiceDate.value = state.invoiceDate || '';
+        editor.dueDate.value = state.dueDate || '';
+        editor.paymentTerms.value = state.paymentTerms || 'Net 30';
+        editor.notes.value = state.notes || '';
+        editor.taxRate.value = state.taxRate || '0';
+        editor.currencySelect.value = state.currency || 'USD';
+        editor.languageSelect.value = state.lang || 'en';
+        
+        editor.showLogo.checked = state.showLogo !== false;
+        editor.showSignature.checked = state.showSignature !== false;
+        editor.showPaymentTerms.checked = state.showPaymentTerms !== false;
+
+        if (state.logo) {
+            preview.logo.src = state.logo;
+        }
+        if (state.signature) {
+            signaturePad.fromDataURL(state.signature);
+        }
+
+        editor.itemsEditorList.innerHTML = '';
+        if (state.items && state.items.length > 0) {
+            state.items.forEach(item => addItemEditorRow(item));
+        } else {
+            addItemEditorRow();
+        }
+        
+        return true; // State was loaded
+    };
 
     // --- I18N & UI FUNCTIONS ---
     const setLanguage = (lang) => {
         currentLang = lang;
         document.querySelectorAll('[data-lang]').forEach(el => {
             const key = el.getAttribute('data-lang');
-            if (translations[lang][key]) {
-                el.innerHTML = translations[lang][key];
-            }
+            if (translations[lang][key]) el.innerHTML = translations[lang][key];
         });
         document.querySelectorAll('[data-lang-placeholder]').forEach(el => {
             const key = el.getAttribute('data-lang-placeholder');
-            if (translations[lang][key]) {
-                el.placeholder = translations[lang][key];
-            }
+            if (translations[lang][key]) el.placeholder = translations[lang][key];
         });
         document.querySelectorAll('[data-lang-preview]').forEach(el => {
             const key = el.getAttribute('data-lang-preview');
-            if (translations[lang][key]) {
-                el.textContent = translations[lang][key];
-            }
+            if (translations[lang][key]) el.textContent = translations[lang][key];
         });
-        // Update item placeholders
         editor.itemsEditorList.querySelectorAll('.item-description').forEach(item => {
             item.placeholder = translations[lang].itemDescriptionPlaceholder;
         });
-        updatePreview(); // Ensure preview is updated immediately after language change
+        updatePreview();
     };
 
     const resizeCanvas = () => {
@@ -163,12 +234,6 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.height = canvas.offsetHeight * ratio;
         canvas.getContext("2d").scale(ratio, ratio);
         signaturePad.clear();
-    };
-
-    const formatDisplayDate = (dateString) => {
-        if (!dateString) return '';
-        // Flatpickr gives us the correct format, so we just return it
-        return dateString;
     };
 
     // --- CORE LOGIC ---
@@ -181,7 +246,6 @@ document.addEventListener('DOMContentLoaded', () => {
         preview.notes.textContent = editor.notes.value;
         preview.paymentTerms.textContent = editor.paymentTerms.value;
 
-        // Toggle visibility based on checkboxes
         preview.logo.style.display = editor.showLogo.checked ? 'block' : 'none';
         preview.signature.parentElement.style.display = editor.showSignature.checked ? 'block' : 'none';
         preview.paymentTermsContainer.style.display = editor.showPaymentTerms.checked ? 'block' : 'none';
@@ -192,6 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             preview.signature.src = '';
         }
+        saveState();
     };
 
     const updateItemsAndTotals = () => {
@@ -221,14 +286,15 @@ document.addEventListener('DOMContentLoaded', () => {
         preview.total.textContent = formatCurrency(totalAmount);
     };
 
-    const addItemEditorRow = () => {
+    const addItemEditorRow = (item = {}) => {
         const itemDiv = document.createElement('div');
         itemDiv.className = 'item-editor grid grid-cols-12 gap-2 items-center p-2 bg-gray-50 rounded';
+        const total = (item.quantity || 1) * (item.rate || 0);
         itemDiv.innerHTML = `
-            <input type="text" class="item-description col-span-5 p-2 border rounded" placeholder="${translations[currentLang].itemDescriptionPlaceholder}">
-            <input type="number" class="item-quantity col-span-2 p-2 border rounded text-right" value="1" min="0">
-            <input type="number" class="item-rate col-span-2 p-2 border rounded text-right" value="0.00" step="0.01" min="0">
-            <span class="col-span-2 text-right text-gray-600 item-total">${formatCurrency(0)}</span>
+            <input type="text" class="item-description col-span-5 p-2 border rounded" placeholder="${translations[currentLang].itemDescriptionPlaceholder}" value="${item.description || ''}">
+            <input type="number" class="item-quantity col-span-2 p-2 border rounded text-right" value="${item.quantity || 1}" min="0">
+            <input type="number" class="item-rate col-span-2 p-2 border rounded text-right" value="${item.rate || '0.00'}" step="0.01" min="0">
+            <span class="col-span-2 text-right text-gray-600 item-total">${formatCurrency(total)}</span>
             <button class="remove-item col-span-1 text-red-500 hover:text-red-700"><i class="fas fa-trash-alt"></i></button>
         `;
         editor.itemsEditorList.appendChild(itemDiv);
@@ -245,87 +311,60 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const resetForm = () => {
-        if (confirm('Are you sure you want to reset everything?')) {
+        if (confirm('Are you sure you want to reset everything? This will clear all saved data.')) {
+            localStorage.removeItem('invoiceState');
             document.querySelectorAll('input, textarea, select').forEach(el => {
-                if (el.type === 'checkbox') {
-                    el.checked = true;
-                } else if (el.id !== 'language-select') {
-                    el.value = '';
-                }
+                if (el.type === 'checkbox') el.checked = true;
+                else if (el.id !== 'language-select') el.value = '';
             });
             editor.itemsEditorList.innerHTML = '';
             editor.taxRate.value = '0';
             editor.currencySelect.selectedIndex = 0;
             signaturePad.clear();
             preview.logo.src = 'https://freemediatools.com/assets/images/pdf-invoice-editor-ultimate/logo.png';
-            initialize();
+            initialize(true); // Pass true to skip loading state
         }
     };
 
     const downloadPDF = () => {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-
-        // --- DOCUMENT STYLING AND METADATA ---
         const PADDING = 15;
         const PAGE_WIDTH = doc.internal.pageSize.getWidth();
-        const PAGE_HEIGHT = doc.internal.pageSize.getHeight();
-        const CONTENT_WIDTH = PAGE_WIDTH - PADDING * 2;
-
-        // --- HELPER FUNCTIONS ---
         const addWrappedText = (text, x, y, options) => {
-            const lines = doc.splitTextToSize(text, options.maxWidth || CONTENT_WIDTH);
+            const lines = doc.splitTextToSize(text, options.maxWidth || (PAGE_WIDTH - PADDING * 2));
             doc.text(lines, x, y);
             return doc.getTextDimensions(lines).h;
         };
 
-        // --- HEADER ---
-        // Logo
         if (editor.showLogo.checked && preview.logo.src && !preview.logo.src.includes('placeholder')) {
             try {
                 doc.addImage(preview.logo, 'PNG', PADDING, PADDING, 40, 20);
-            } catch (e) {
-                console.error("Error adding logo image:", e);
-            }
+            } catch (e) { console.error("Error adding logo image:", e); }
         }
         
-        // Invoice Title
         doc.setFontSize(30).setFont(undefined, 'bold');
         doc.text(translations[currentLang].invoice.toUpperCase(), PAGE_WIDTH - PADDING, PADDING + 15, { align: 'right' });
         doc.setFontSize(12).setFont(undefined, 'normal');
         doc.text(`${translations[currentLang].invoiceNumberLabel} ${editor.invoiceNumber.value}`, PAGE_WIDTH - PADDING, PADDING + 22, { align: 'right' });
 
-        // --- ADDRESSES ---
         let yPos = PADDING + 40;
         doc.setFontSize(10);
-        const fromText = editor.fromAddress.value;
-        const toText = editor.toAddress.value;
-        addWrappedText(fromText, PADDING, yPos, { maxWidth: 80 });
-        
+        addWrappedText(editor.fromAddress.value, PADDING, yPos, { maxWidth: 80 });
         doc.setFont(undefined, 'bold');
         doc.text(translations[currentLang].billedTo.toUpperCase(), PAGE_WIDTH / 2, yPos);
         doc.setFont(undefined, 'normal');
-        addWrappedText(toText, PAGE_WIDTH / 2, yPos + 5, { maxWidth: 80 });
+        addWrappedText(editor.toAddress.value, PAGE_WIDTH / 2, yPos + 5, { maxWidth: 80 });
 
-        // --- DATES & PAYMENT TERMS ---
         yPos += 30;
-        let dateX = PAGE_WIDTH - PADDING;
-        doc.text(`${translations[currentLang].invoiceDate} ${editor.invoiceDate.value}`, dateX, yPos, { align: 'right' });
-        doc.text(`${translations[currentLang].previewDueDate} ${editor.dueDate.value}`, dateX, yPos + 7, { align: 'right' });
+        doc.text(`${translations[currentLang].invoiceDate} ${editor.invoiceDate.value}`, PAGE_WIDTH - PADDING, yPos, { align: 'right' });
+        doc.text(`${translations[currentLang].previewDueDate} ${editor.dueDate.value}`, PAGE_WIDTH - PADDING, yPos + 7, { align: 'right' });
         if (editor.showPaymentTerms.checked && editor.paymentTerms.value) {
-            doc.text(`${translations[currentLang].previewPaymentTerms} ${editor.paymentTerms.value}`, dateX, yPos + 14, { align: 'right' });
+            doc.text(`${translations[currentLang].previewPaymentTerms} ${editor.paymentTerms.value}`, PAGE_WIDTH - PADDING, yPos + 14, { align: 'right' });
         }
-        
         yPos += 20;
 
-        // --- ITEMS TABLE ---
-        const tableHead = [[
-            translations[currentLang].description,
-            translations[currentLang].qty,
-            translations[currentLang].unitPrice,
-            translations[currentLang].total
-        ]];
-
+        const tableHead = [[translations[currentLang].description, translations[currentLang].qty, translations[currentLang].unitPrice, translations[currentLang].total]];
         const tableBody = [];
         let subtotal = 0;
         editor.itemsEditorList.querySelectorAll('.item-editor').forEach(itemRow => {
@@ -334,51 +373,27 @@ document.addEventListener('DOMContentLoaded', () => {
             const rate = parseFloat(itemRow.querySelector('.item-rate').value) || 0;
             const total = quantity * rate;
             subtotal += total;
-            tableBody.push([
-                description,
-                quantity,
-                formatCurrency(rate),
-                formatCurrency(total)
-            ]);
+            tableBody.push([description, quantity, formatCurrency(rate), formatCurrency(total)]);
         });
 
-        doc.autoTable({
-            startY: yPos,
-            head: tableHead,
-            body: tableBody,
-            theme: 'striped',
-            headStyles: { fillColor: [34, 34, 34] },
-            styles: { fontSize: 10 },
-            columnStyles: {
-                1: { halign: 'center' },
-                2: { halign: 'right' },
-                3: { halign: 'right' }
-            }
-        });
+        doc.autoTable({ startY: yPos, head: tableHead, body: tableBody, theme: 'striped', headStyles: { fillColor: [34, 34, 34] }, styles: { fontSize: 10 }, columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right' }, 3: { halign: 'right' } } });
 
-        // --- TOTALS ---
         yPos = doc.autoTable.previous.finalY + 10;
         const taxRate = parseFloat(editor.taxRate.value) || 0;
         const taxAmount = subtotal * (taxRate / 100);
         const totalAmount = subtotal + taxAmount;
-
-        doc.setFontSize(12);
         const totalsX = PAGE_WIDTH - PADDING - 50;
+        doc.setFontSize(12);
         doc.text(`${translations[currentLang].subtotal}:`, totalsX, yPos, { align: 'left' });
         doc.text(formatCurrency(subtotal), PAGE_WIDTH - PADDING, yPos, { align: 'right' });
-        
         doc.text(`${translations[currentLang].tax} (${taxRate}%):`, totalsX, yPos + 7, { align: 'left' });
         doc.text(formatCurrency(taxAmount), PAGE_WIDTH - PADDING, yPos + 7, { align: 'right' });
-        
         doc.setFont(undefined, 'bold');
         doc.text(`${translations[currentLang].total}:`, totalsX, yPos + 14, { align: 'left' });
         doc.text(formatCurrency(totalAmount), PAGE_WIDTH - PADDING, yPos + 14, { align: 'right' });
         doc.setFont(undefined, 'normal');
 
-        // --- FOOTER (NOTES & SIGNATURE) ---
-        yPos = Math.max(yPos + 30, PAGE_HEIGHT - 50); // Ensure footer is near the bottom
-        
-        // Notes
+        yPos = Math.max(yPos + 30, doc.internal.pageSize.getHeight() - 50);
         if (editor.notes.value) {
             doc.setFontSize(10).setFont(undefined, 'bold');
             doc.text(translations[currentLang].previewNotes.toUpperCase(), PADDING, yPos);
@@ -386,37 +401,28 @@ document.addEventListener('DOMContentLoaded', () => {
             addWrappedText(editor.notes.value, PADDING, yPos + 5, { maxWidth: 120 });
         }
 
-        // Signature
         if (editor.showSignature.checked && !signaturePad.isEmpty()) {
             const sigImgData = signaturePad.toDataURL('image/png');
             const sigCanvas = editor.signaturePadCanvas;
             const sigRatio = sigCanvas.width / sigCanvas.height;
-
-            const sigMaxWidth = 60; // mm
+            const sigMaxWidth = 60;
             const sigHeight = sigMaxWidth / sigRatio;
             const sigX = PAGE_WIDTH - PADDING - sigMaxWidth;
-            
             doc.addImage(sigImgData, 'PNG', sigX, yPos, sigMaxWidth, sigHeight);
-            
             const lineY = yPos + sigHeight + 2;
             doc.line(sigX, lineY, sigX + sigMaxWidth, lineY);
             doc.text(translations[currentLang].previewSignature, sigX, lineY + 5);
         }
 
-        // --- SAVE DOCUMENT ---
         doc.save(`invoice-${editor.invoiceNumber.value || 'download'}.pdf`);
     };
 
     const formatCurrency = (amount) => `${currencySymbol}${amount.toFixed(2)}`;
-    const setDate = (element) => {
-        const today = new Date().toISOString().split('T')[0];
-        element.value = today;
-    };
 
     // --- EVENT LISTENERS ---
     window.addEventListener('resize', resizeCanvas);
     editor.languageSelect.addEventListener('change', (e) => setLanguage(e.target.value));
-    editor.addItemBtn.addEventListener('click', addItemEditorRow);
+    editor.addItemBtn.addEventListener('click', () => addItemEditorRow());
     editor.resetBtn.addEventListener('click', resetForm);
     editor.downloadBtn.addEventListener('click', downloadPDF);
     editor.itemsEditorList.addEventListener('input', handleItemInput);
@@ -437,6 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const reader = new FileReader();
             reader.onload = (event) => {
                 preview.logo.src = event.target.result;
+                updatePreview();
             };
             reader.readAsDataURL(file);
         }
@@ -452,19 +459,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- INITIALIZATION ---
-    const initialize = () => {
-        // Init Flatpickr
-        const fpConfig = {
-            dateFormat: "d/m/Y",
-        };
+    const initialize = (skipLoad = false) => {
+        const fpConfig = { dateFormat: "d/m/Y" };
         flatpickr(editor.invoiceDate, { ...fpConfig, defaultDate: "today" });
         flatpickr(editor.dueDate, fpConfig);
-
         resizeCanvas();
-        editor.paymentTerms.value = "Net 30";
-        editor.invoiceNumber.value = 'INV-001';
-        addItemEditorRow();
-        setLanguage(currentLang); // This will also call updatePreview
+
+        if (!skipLoad && loadState()) {
+            // State loaded, now update UI to reflect it
+            setLanguage(editor.languageSelect.value);
+            updatePreview();
+        } else {
+            // No state or reset, initialize fresh
+            editor.paymentTerms.value = "Net 30";
+            editor.invoiceNumber.value = 'INV-001';
+            addItemEditorRow();
+            setLanguage('en');
+        }
     };
 
     initialize();
